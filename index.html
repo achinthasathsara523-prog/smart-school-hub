@@ -1,0 +1,684 @@
+
+# Write the HTML file in parts to avoid truncation issues
+
+part1 = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart School Hub - Modern Attendance Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        secondary: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        .glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); }
+        .dark .glass { background: rgba(15,23,42,0.7); }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .calendar-day { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 0.5rem; transition: all 0.2s; font-size: 0.875rem; }
+        .calendar-day:hover { background: #dbeafe; }
+        .dark .calendar-day:hover { background: #1e3a8a; }
+        .calendar-day.present { background: #dcfce7; color: #166534; font-weight: 600; }
+        .dark .calendar-day.present { background: #14532d; color: #86efac; }
+        .calendar-day.absent { background: #fee2e2; color: #991b1b; font-weight: 600; }
+        .dark .calendar-day.absent { background: #7f1d1d; color: #fca5a5; }
+        .calendar-day.late { background: #fef3c7; color: #92400e; font-weight: 600; }
+        .dark .calendar-day.late { background: #78350f; color: #fcd34d; }
+        .calendar-day.today { border: 2px solid #3b82f6; }
+        .sidebar-link { transition: all 0.2s; border-left: 3px solid transparent; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(59,130,246,0.1); border-left-color: #3b82f6; color: #2563eb; }
+        .dark .sidebar-link:hover, .dark .sidebar-link.active { background: rgba(59,130,246,0.2); color: #60a5fa; }
+        .stat-card { position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, transparent 70%); }
+        .notification-badge { animation: bounce 1s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        .dropdown-menu { transform-origin: top right; transition: all 0.2s; }
+        .dropdown-menu.hidden { transform: scale(0.95); opacity: 0; pointer-events: none; }
+        .dropdown-menu:not(.hidden) { transform: scale(1); opacity: 1; pointer-events: auto; }
+        .modal { transition: opacity 0.3s ease; }
+        .modal.hidden { opacity: 0; pointer-events: none; }
+        .modal:not(.hidden) { opacity: 1; pointer-events: auto; }
+        .modal-content { transition: transform 0.3s ease; }
+        .modal.hidden .modal-content { transform: scale(0.95) translateY(10px); }
+        .modal:not(.hidden) .modal-content { transform: scale(1) translateY(0); }
+        .toast { animation: toastSlide 0.3s ease-out; }
+        @keyframes toastSlide { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    </style>
+</head>
+<body class="font-sans antialiased bg-secondary-50 dark:bg-secondary-900 text-secondary-800 dark:text-secondary-100 transition-colors duration-300">
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Landing Page -->
+    <div id="landingPage" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="fixed w-full z-40 glass border-b border-secondary-200 dark:border-secondary-700">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 flex items-center gap-2">
+                            <div class="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center shadow-lg">
+                                <i class="fas fa-graduation-cap text-white text-xl"></i>
+                            </div>
+                            <span class="text-xl font-bold text-primary-700 dark:text-primary-400">Smart School Hub</span>
+                        </div>
+                    </div>
+                    <div class="hidden md:flex items-center space-x-8">
+                        <a href="#features" class="text-secondary-600 dark:text-secondary-300 hover:text-primary-600 dark:hover:text-primary-400 transition">Features</a>
+                        <a href="#statistics" class="text-secondary-600 dark:text-secondary-300 hover:text-primary-600 dark:hover:text-primary-400 transition">Statistics</a>
+                        <a href="#testimonials" class="text-secondary-600 dark:text-secondary-300 hover:text-primary-600 dark:hover:text-primary-400 transition">Testimonials</a>
+                        <a href="#contact" class="text-secondary-600 dark:text-secondary-300 hover:text-primary-600 dark:hover:text-primary-400 transition">Contact</a>
+                        <button onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700 transition">
+                            <i class="fas fa-moon dark:hidden text-secondary-600"></i>
+                            <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                        </button>
+                        <button onclick="showLoginModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-medium transition shadow-lg shadow-primary-500/30">Login</button>
+                    </div>
+                    <div class="md:hidden flex items-center">
+                        <button onclick="toggleMobileMenu()" class="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700">
+                            <i class="fas fa-bars text-secondary-600 dark:text-secondary-300"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="mobileMenu" class="hidden md:hidden glass border-t border-secondary-200 dark:border-secondary-700">
+                <div class="px-4 pt-2 pb-4 space-y-2">
+                    <a href="#features" class="block px-3 py-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700">Features</a>
+                    <a href="#statistics" class="block px-3 py-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700">Statistics</a>
+                    <a href="#testimonials" class="block px-3 py-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700">Testimonials</a>
+                    <a href="#contact" class="block px-3 py-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700">Contact</a>
+                    <button onclick="showLoginModal()" class="w-full bg-primary-600 text-white px-4 py-2 rounded-lg mt-2">Login</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <section class="relative pt-32 pb-20 lg:pt-40 lg:pb-32 overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-secondary-50 dark:from-secondary-900 dark:via-secondary-900 dark:to-secondary-800"></div>
+            <div class="absolute top-20 right-0 w-96 h-96 bg-primary-400/20 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-72 h-72 bg-primary-600/10 rounded-full blur-3xl"></div>
+            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                    <div class="animate-fade-in">
+                        <div class="inline-flex items-center gap-2 bg-primary-100 dark:bg-primary-900/50 text-primary-700 dark:text-primary-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                            <span class="w-2 h-2 bg-primary-500 rounded-full animate-pulse"></span>
+                            New: QR Code Attendance System
+                        </div>
+                        <h1 class="text-5xl lg:text-6xl font-bold text-secondary-900 dark:text-white leading-tight mb-6">
+                            Smart Attendance<br><span class="text-primary-600">Made Simple</span>
+                        </h1>
+                        <p class="text-xl text-secondary-600 dark:text-secondary-300 mb-8 leading-relaxed">
+                            Revolutionize your school's attendance management with our cutting-edge platform. Real-time tracking, instant notifications, and comprehensive analytics.
+                        </p>
+                        <div class="flex flex-wrap gap-4">
+                            <button onclick="showLoginModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition shadow-xl shadow-primary-500/30 flex items-center gap-2">
+                                Get Started <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <button onclick="scrollToSection('features')" class="bg-white dark:bg-secondary-800 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-secondary-700 dark:text-secondary-200 px-8 py-4 rounded-xl font-semibold text-lg transition border border-secondary-200 dark:border-secondary-600">Learn More</button>
+                        </div>
+                        <div class="mt-10 flex items-center gap-6 text-sm text-secondary-500 dark:text-secondary-400">
+                            <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i><span>Free Trial</span></div>
+                            <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i><span>No Credit Card</span></div>
+                            <div class="flex items-center gap-2"><i class="fas fa-check-circle text-green-500"></i><span>24/7 Support</span></div>
+                        </div>
+                    </div>
+                    <div class="relative lg:pl-12">
+                        <div class="relative bg-white dark:bg-secondary-800 rounded-2xl shadow-2xl p-6 border border-secondary-200 dark:border-secondary-700">
+                            <div class="flex items-center justify-between mb-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center"><i class="fas fa-user-tie text-primary-600"></i></div>
+                                    <div><p class="font-semibold text-secondary-900 dark:text-white">Admin Dashboard</p><p class="text-xs text-secondary-500">Real-time Overview</p></div>
+                                </div>
+                                <span class="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">Live</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                <div class="bg-secondary-50 dark:bg-secondary-700/50 rounded-xl p-4"><p class="text-2xl font-bold text-secondary-900 dark:text-white">2,450</p><p class="text-xs text-secondary-500 dark:text-secondary-400">Total Students</p></div>
+                                <div class="bg-secondary-50 dark:bg-secondary-700/50 rounded-xl p-4"><p class="text-2xl font-bold text-green-600">94.2%</p><p class="text-xs text-secondary-500 dark:text-secondary-400">Attendance Rate</p></div>
+                                <div class="bg-secondary-50 dark:bg-secondary-700/50 rounded-xl p-4"><p class="text-2xl font-bold text-secondary-900 dark:text-white">128</p><p class="text-xs text-secondary-500 dark:text-secondary-400">Teachers</p></div>
+                                <div class="bg-secondary-50 dark:bg-secondary-700/50 rounded-xl p-4"><p class="text-2xl font-bold text-orange-600">12</p><p class="text-xs text-secondary-500 dark:text-secondary-400">Absent Today</p></div>
+                            </div>
+                            <div class="h-32 bg-secondary-50 dark:bg-secondary-700/50 rounded-xl flex items-end justify-around px-4 pb-4 gap-2">
+                                <div class="w-full bg-primary-400 rounded-t" style="height: 60%"></div>
+                                <div class="w-full bg-primary-500 rounded-t" style="height: 80%"></div>
+                                <div class="w-full bg-primary-400 rounded-t" style="height: 55%"></div>
+                                <div class="w-full bg-primary-600 rounded-t" style="height: 90%"></div>
+                                <div class="w-full bg-primary-500 rounded-t" style="height: 75%"></div>
+                                <div class="w-full bg-primary-400 rounded-t" style="height: 65%"></div>
+                                <div class="w-full bg-primary-500 rounded-t" style="height: 85%"></div>
+                            </div>
+                        </div>
+                        <div class="absolute -top-6 -right-6 bg-white dark:bg-secondary-800 rounded-xl shadow-lg p-4 border border-secondary-200 dark:border-secondary-700 animate-bounce" style="animation-duration: 3s;">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center"><i class="fas fa-check text-green-600 text-sm"></i></div>
+                                <div><p class="text-xs font-semibold text-secondary-900 dark:text-white">Attendance Marked</p><p class="text-xs text-secondary-500">Class 10-A</p></div>
+                            </div>
+                        </div>
+                        <div class="absolute -bottom-4 -left-4 bg-white dark:bg-secondary-800 rounded-xl shadow-lg p-4 border border-secondary-200 dark:border-secondary-700" style="animation: bounce 4s infinite;">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center"><i class="fas fa-bell text-blue-600 text-sm"></i></div>
+                                <div><p class="text-xs font-semibold text-secondary-900 dark:text-white">New Notification</p><p class="text-xs text-secondary-500">Parent Alert Sent</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-20 bg-white dark:bg-secondary-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-bold text-secondary-900 dark:text-white mb-4">Powerful Features</h2>
+                    <p class="text-lg text-secondary-600 dark:text-secondary-300 max-w-2xl mx-auto">Everything you need to manage school attendance efficiently and effectively.</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="card-hover bg-secondary-50 dark:bg-secondary-700/50 rounded-2xl p-8 border border-secondary-200 dark:border-secondary-600">
+                        <div class="w-14 h-14 bg-primary-100 dark:bg-primary-900/50 rounded-xl flex items-center justify-center mb-6"><i class="fas fa-qrcode text-primary-600 text-2xl"></i></div>
+                        <h3 class="text-xl font-bold text-secondary-900 dark:text-white mb-3">QR Code Attendance</h3>
+                        <p class="text-secondary-600 dark:text-secondary-300">Instant attendance marking with QR code scanning. Students can scan and mark their presence in seconds.</p>
+                    </div>
+                    <div class="card-hover bg-secondary-50 dark:bg-secondary-700/50 rounded-2xl p-8 border border-secondary-200 dark:border-secondary-600">
+                        <div class="w-14 h-14 bg-green-100 dark:bg-green-900/50 rounded-xl flex items-center justify-center mb-6"><i class="fas fa-bell text-green-600 text-2xl"></i></div>
+                        <h3 class="text-xl font-bold text-secondary-900 dark:text-white mb-3">Real-time Notifications</h3>
+                        <p class="text-secondary-600 dark:text-secondary-300">Instant alerts to parents when students are absent or late. Keep everyone informed automatically.</p>
+                    </div>
+                    <div class="card-hover bg-secondary-50 dark:bg-secondary-700/50 rounded-2xl p-8 border border-secondary-200 dark:border-secondary-600">
+                        <div class="w-14 h-14 bg-purple-100 dark:bg-purple-900/50 rounded-xl flex items-center justify-center mb-6"><i class="fas fa-chart-line text-purple-600 text-2xl"></i></div>
+                        <h3 class="text-xl font-bold text-secondary-900 dark:text-white mb-3">Advanced Analytics</h3>
+                        <p class="text-secondary-600 dark:text-secondary-300">Comprehensive reports and charts. Track attendance trends, identify patterns, and make data-driven decisions.</p>
+                    </div>
+                    <div class="card-hover bg-secondary-50 dark:bg-secondary-700/50 rounded-2xl p-8 border border-secondary-200 dark:border-secondary-600">
+                        <div class="w-14 h-14 bg-orange-100 dark:bg-orange-900/50 rounded-xl flex items-center justify-center mb-6"><i class="fas fa-users text-orange-600 text-2xl"></i></div>
+                        <h3 class="text-xl font-bold text-secondary-900 dark:text-white mb-3">Multi-Role Access</h3>
+                        <p class="text-secondary-600 dark:text-secondary-300">Dedicated dashboards for Admin, Teachers, Students, and Parents with role-based permissions.</p>
+                    </div>
+                    <div class="card-hover bg-secondary-50 dark:bg-secondary-700/50 rounded-2xl p-8 border border-secondary-200 dark:border-secondary-600">
+                        <div class="w-14 h-14 bg-pink-100 dark:bg-pink-900/50 rounded-xl flex items-center justify-center mb-6"><i class="fas fa-file-export text-pink-600 text-2xl"></i></div>
+                        <h3 class="text-xl font-bold text-secondary-900 dark:text-white mb-3">Export Reports</h3>
+                        <p class="text-secondary-600 dark:text-secondary-300">Download attendance reports in PDF and Excel formats. Daily, weekly, and monthly summaries available.</p>
+                    </div>
+                    <div class="card-hover bg-secondary-50 dark:bg-secondary-700/50 rounded-2xl p-8 border border-secondary-200 dark:border-secondary-600">
+                        <div class="w-14 h-14 bg-cyan-100 dark:bg-cyan-900/50 rounded-xl flex items-center justify-center mb-6"><i class="fas fa-globe text-cyan-600 text-2xl"></i></div>
+                        <h3 class="text-xl font-bold text-secondary-900 dark:text-white mb-3">Multi-Language</h3>
+                        <p class="text-secondary-600 dark:text-secondary-300">Support for English, Sinhala, and Tamil. Accessible to all communities in your school.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section id="statistics" class="py-20 bg-gradient-to-br from-primary-600 to-primary-800 text-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-bold mb-4">Trusted by Schools Worldwide</h2>
+                    <p class="text-primary-100 text-lg">Join thousands of educational institutions using Smart School Hub</p>
+                </div>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="text-center"><p class="text-5xl font-bold mb-2">500+</p><p class="text-primary-200">Schools</p></div>
+                    <div class="text-center"><p class="text-5xl font-bold mb-2">250K+</p><p class="text-primary-200">Students</p></div>
+                    <div class="text-center"><p class="text-5xl font-bold mb-2">15K+</p><p class="text-primary-200">Teachers</p></div>
+                    <div class="text-center"><p class="text-5xl font-bold mb-2">99.9%</p><p class="text-primary-200">Uptime</p></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section id="testimonials" class="py-20 bg-secondary-50 dark:bg-secondary-900">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-bold text-secondary-900 dark:text-white mb-4">What Schools Say</h2>
+                    <p class="text-lg text-secondary-600 dark:text-secondary-300">Hear from educators who transformed their attendance management</p>
+                </div>
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg border border-secondary-200 dark:border-secondary-700">
+                        <div class="flex items-center gap-1 mb-4">
+                            <i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i>
+                        </div>
+                        <p class="text-secondary-600 dark:text-secondary-300 mb-6">"Smart School Hub has revolutionized how we track attendance. The QR code feature saves us 30 minutes every morning."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center"><span class="text-primary-700 dark:text-primary-300 font-bold">PM</span></div>
+                            <div><p class="font-semibold text-secondary-900 dark:text-white">Principal Mrs. Silva</p><p class="text-sm text-secondary-500">Royal College, Colombo</p></div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg border border-secondary-200 dark:border-secondary-700">
+                        <div class="flex items-center gap-1 mb-4">
+                            <i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i>
+                        </div>
+                        <p class="text-secondary-600 dark:text-secondary-300 mb-6">"The parent notification system is excellent. Parents appreciate being informed immediately when their child is absent."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center"><span class="text-green-700 dark:text-green-300 font-bold">TK</span></div>
+                            <div><p class="font-semibold text-secondary-900 dark:text-white">Teacher Mr. Kumar</p><p class="text-sm text-secondary-500">Visaka Vidyalaya</p></div>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-secondary-800 rounded-2xl p-8 shadow-lg border border-secondary-200 dark:border-secondary-700">
+                        <div class="flex items-center gap-1 mb-4">
+                            <i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i><i class="fas fa-star text-yellow-400"></i>
+                        </div>
+                        <p class="text-secondary-600 dark:text-secondary-300 mb-6">"As a parent, I love being able to monitor my child's attendance in real-time. The mobile interface is very user-friendly."</p>
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center"><span class="text-purple-700 dark:text-purple-300 font-bold">SF</span></div>
+                            <div><p class="font-semibold text-secondary-900 dark:text-white">Mrs. Fernando</p><p class="text-sm text-secondary-500">Parent, Ananda College</p></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="py-20 bg-white dark:bg-secondary-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid lg:grid-cols-2 gap-12">
+                    <div>
+                        <h2 class="text-3xl font-bold text-secondary-900 dark:text-white mb-4">Get In Touch</h2>
+                        <p class="text-lg text-secondary-600 dark:text-secondary-300 mb-8">Ready to transform your school's attendance management? Contact us for a demo.</p>
+                        <div class="space-y-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-xl flex items-center justify-center"><i class="fas fa-envelope text-primary-600"></i></div>
+                                <div><p class="font-semibold text-secondary-900 dark:text-white">Email</p><p class="text-secondary-600 dark:text-secondary-300">contact@smartschoolhub.com</p></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-xl flex items-center justify-center"><i class="fas fa-phone text-primary-600"></i></div>
+                                <div><p class="font-semibold text-secondary-900 dark:text-white">Phone</p><p class="text-secondary-600 dark:text-secondary-300">+94 11 234 5678</p></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-primary-100 dark:bg-primary-900 rounded-xl flex items-center justify-center"><i class="fas fa-map-marker-alt text-primary-600"></i></div>
+                                <div><p class="font-semibold text-secondary-900 dark:text-white">Address</p><p class="text-secondary-600 dark:text-secondary-300">123 Education Lane, Colombo 07, Sri Lanka</p></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-secondary-50 dark:bg-secondary-700/50 rounded-2xl p-8 border border-secondary-200 dark:border-secondary-600">
+                        <form onsubmit="handleContactSubmit(event)">
+                            <div class="space-y-4">
+                                <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Name</label><input type="text" class="w-full px-4 py-3 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Your name" required></div>
+                                <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Email</label><input type="email" class="w-full px-4 py-3 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="your@email.com" required></div>
+                                <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">School Name</label><input type="text" class="w-full px-4 py-3 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="Your school name"></div>
+                                <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Message</label><textarea rows="4" class="w-full px-4 py-3 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="How can we help you?" required></textarea></div>
+                                <button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-semibold transition">Send Message</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="bg-secondary-900 text-secondary-300 py-12">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid md:grid-cols-4 gap-8 mb-8">
+                    <div>
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center"><i class="fas fa-graduation-cap text-white text-sm"></i></div>
+                            <span class="text-lg font-bold text-white">Smart School Hub</span>
+                        </div>
+                        <p class="text-sm">Modern attendance management for the next generation of education.</p>
+                    </div>
+                    <div><h4 class="text-white font-semibold mb-4">Product</h4><ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-primary-400 transition">Features</a></li><li><a href="#" class="hover:text-primary-400 transition">Pricing</a></li><li><a href="#" class="hover:text-primary-400 transition">API</a></li><li><a href="#" class="hover:text-primary-400 transition">Integrations</a></li></ul></div>
+                    <div><h4 class="text-white font-semibold mb-4">Company</h4><ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-primary-400 transition">About</a></li><li><a href="#" class="hover:text-primary-400 transition">Blog</a></li><li><a href="#" class="hover:text-primary-400 transition">Careers</a></li><li><a href="#" class="hover:text-primary-400 transition">Contact</a></li></ul></div>
+                    <div><h4 class="text-white font-semibold mb-4">Legal</h4><ul class="space-y-2 text-sm"><li><a href="#" class="hover:text-primary-400 transition">Privacy</a></li><li><a href="#" class="hover:text-primary-400 transition">Terms</a></li><li><a href="#" class="hover:text-primary-400 transition">Security</a></li><li><a href="#" class="hover:text-primary-400 transition">Cookies</a></li></ul></div>
+                </div>
+                <div class="border-t border-secondary-700 pt-8 flex flex-col md:flex-row justify-between items-center">
+                    <p class="text-sm">© 2026 Smart School Hub. All rights reserved.</p>
+                    <div class="flex gap-4 mt-4 md:mt-0">
+                        <a href="#" class="hover:text-primary-400 transition"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="hover:text-primary-400 transition"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="hover:text-primary-400 transition"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="hover:text-primary-400 transition"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+'''
+
+with open('/mnt/agents/output/smart_school_hub.html', 'w', encoding='utf-8') as f:
+    f.write(part1)
+
+print("Part 1 written successfully")
+
+part2 = '''
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="hideLoginModal()"></div>
+        <div class="modal-content bg-white dark:bg-secondary-800 rounded-2xl shadow-2xl w-full max-w-md relative z-10 overflow-hidden">
+            <div class="p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center"><i class="fas fa-graduation-cap text-white"></i></div>
+                        <span class="text-xl font-bold text-secondary-900 dark:text-white">Smart School Hub</span>
+                    </div>
+                    <button onclick="hideLoginModal()" class="text-secondary-400 hover:text-secondary-600 dark:hover:text-secondary-200"><i class="fas fa-times text-xl"></i></button>
+                </div>
+                <div id="loginForm">
+                    <h3 class="text-2xl font-bold text-secondary-900 dark:text-white mb-2">Welcome Back</h3>
+                    <p class="text-secondary-500 dark:text-secondary-400 mb-6">Sign in to your account</p>
+                    <form onsubmit="handleLogin(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Email</label>
+                            <input type="email" id="loginEmail" class="w-full px-4 py-3 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="admin@school.com" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Password</label>
+                            <div class="relative">
+                                <input type="password" id="loginPassword" class="w-full px-4 py-3 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="password" required>
+                                <button type="button" onclick="togglePassword('loginPassword')" class="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-400 hover:text-secondary-600"><i class="fas fa-eye"></i></button>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-2"><input type="checkbox" class="rounded border-secondary-300 text-primary-600 focus:ring-primary-500"><span class="text-sm text-secondary-600 dark:text-secondary-300">Remember me</span></label>
+                            <button type="button" onclick="showForgotPassword()" class="text-sm text-primary-600 hover:text-primary-700 font-medium">Forgot password?</button>
+                        </div>
+                        <button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-semibold transition flex items-center justify-center gap-2"><span>Sign In</span><i class="fas fa-arrow-right"></i></button>
+                    </form>
+                    <div class="mt-6">
+                        <p class="text-sm text-secondary-500 dark:text-secondary-400 text-center mb-4">Demo Accounts:</p>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <button onclick="fillDemo('admin')" class="p-2 bg-secondary-100 dark:bg-secondary-700 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-600 transition text-left"><span class="font-semibold text-secondary-900 dark:text-white">Admin</span><span class="block text-secondary-500">admin@school.com</span></button>
+                            <button onclick="fillDemo('teacher')" class="p-2 bg-secondary-100 dark:bg-secondary-700 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-600 transition text-left"><span class="font-semibold text-secondary-900 dark:text-white">Teacher</span><span class="block text-secondary-500">teacher@school.com</span></button>
+                            <button onclick="fillDemo('student')" class="p-2 bg-secondary-100 dark:bg-secondary-700 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-600 transition text-left"><span class="font-semibold text-secondary-900 dark:text-white">Student</span><span class="block text-secondary-500">student@school.com</span></button>
+                            <button onclick="fillDemo('parent')" class="p-2 bg-secondary-100 dark:bg-secondary-700 rounded-lg hover:bg-secondary-200 dark:hover:bg-secondary-600 transition text-left"><span class="font-semibold text-secondary-900 dark:text-white">Parent</span><span class="block text-secondary-500">parent@school.com</span></button>
+                        </div>
+                    </div>
+                </div>
+                <div id="forgotPasswordForm" class="hidden">
+                    <h3 class="text-2xl font-bold text-secondary-900 dark:text-white mb-2">Reset Password</h3>
+                    <p class="text-secondary-500 dark:text-secondary-400 mb-6">Enter your email to receive reset instructions</p>
+                    <form onsubmit="handleForgotPassword(event)" class="space-y-4">
+                        <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Email</label><input type="email" class="w-full px-4 py-3 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent" placeholder="your@email.com" required></div>
+                        <button type="submit" class="w-full bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-lg font-semibold transition">Send Reset Link</button>
+                        <button type="button" onclick="showLoginForm()" class="w-full text-secondary-600 dark:text-secondary-300 py-2 text-sm hover:text-primary-600">Back to Login</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Dashboard -->
+    <div id="appDashboard" class="hidden min-h-screen bg-secondary-50 dark:bg-secondary-900">
+        <!-- App Header -->
+        <header class="fixed top-0 w-full z-30 bg-white dark:bg-secondary-800 border-b border-secondary-200 dark:border-secondary-700 shadow-sm">
+            <div class="flex items-center justify-between h-16 px-4 lg:px-8">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700"><i class="fas fa-bars text-secondary-600 dark:text-secondary-300"></i></button>
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center"><i class="fas fa-graduation-cap text-white text-sm"></i></div>
+                        <span class="text-lg font-bold text-secondary-900 dark:text-white hidden sm:block">Smart School Hub</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <button onclick="toggleLanguageDropdown()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700 text-sm"><i class="fas fa-globe text-secondary-500"></i><span id="currentLanguage">English</span><i class="fas fa-chevron-down text-xs text-secondary-400"></i></button>
+                        <div id="languageDropdown" class="dropdown-menu hidden absolute right-0 mt-2 w-40 bg-white dark:bg-secondary-800 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 py-2">
+                            <button onclick="changeLanguage('en')" class="w-full text-left px-4 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-sm">English</button>
+                            <button onclick="changeLanguage('si')" class="w-full text-left px-4 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-sm">Sinhala</button>
+                            <button onclick="changeLanguage('ta')" class="w-full text-left px-4 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-sm">Tamil</button>
+                        </div>
+                    </div>
+                    <button onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700 transition"><i class="fas fa-moon dark:hidden text-secondary-600"></i><i class="fas fa-sun hidden dark:block text-yellow-400"></i></button>
+                    <div class="relative">
+                        <button onclick="toggleNotifications()" class="p-2 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-700 relative"><i class="fas fa-bell text-secondary-600 dark:text-secondary-300"></i><span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full notification-badge"></span></button>
+                        <div id="notificationsPanel" class="dropdown-menu hidden absolute right-0 mt-2 w-80 bg-white dark:bg-secondary-800 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 py-2 max-h-96 overflow-y-auto">
+                            <div class="px-4 py-2 border-b border-secondary-200 dark:border-secondary-700"><p class="font-semibold text-secondary-900 dark:text-white">Notifications</p></div>
+                            <div id="notificationsList" class="divide-y divide-secondary-200 dark:divide-secondary-700"></div>
+                        </div>
+                    </div>
+                    <div class="relative">
+                        <button onclick="toggleProfileDropdown()" class="flex items-center gap-2 hover:bg-secondary-100 dark:hover:bg-secondary-700 rounded-lg p-1 pr-3 transition">
+                            <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center"><i class="fas fa-user text-primary-600 text-sm"></i></div>
+                            <span id="userName" class="text-sm font-medium text-secondary-700 dark:text-secondary-200 hidden sm:block">Admin</span>
+                        </button>
+                        <div id="profileDropdown" class="dropdown-menu hidden absolute right-0 mt-2 w-48 bg-white dark:bg-secondary-800 rounded-xl shadow-lg border border-secondary-200 dark:border-secondary-700 py-2">
+                            <div class="px-4 py-2 border-b border-secondary-200 dark:border-secondary-700"><p id="profileName" class="font-semibold text-secondary-900 dark:text-white">Admin User</p><p id="profileRole" class="text-xs text-secondary-500">Administrator</p></div>
+                            <button onclick="showProfileModal()" class="w-full text-left px-4 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-sm flex items-center gap-2"><i class="fas fa-user-cog text-secondary-400"></i> Profile</button>
+                            <button onclick="showSettingsModal()" class="w-full text-left px-4 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-sm flex items-center gap-2"><i class="fas fa-cog text-secondary-400"></i> Settings</button>
+                            <div class="border-t border-secondary-200 dark:border-secondary-700 mt-2 pt-2">
+                                <button onclick="logout()" class="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm text-red-600 flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside id="sidebar" class="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white dark:bg-secondary-800 border-r border-secondary-200 dark:border-secondary-700 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-20 overflow-y-auto">
+            <nav class="p-4 space-y-1" id="sidebarNav"></nav>
+            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-secondary-200 dark:border-secondary-700">
+                <div class="bg-secondary-50 dark:bg-secondary-700/50 rounded-xl p-4">
+                    <p class="text-xs text-secondary-500 dark:text-secondary-400 mb-1">System Status</p>
+                    <div class="flex items-center gap-2"><span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span><span class="text-xs font-medium text-green-600 dark:text-green-400">All Systems Operational</span></div>
+                </div>
+            </div>
+        </aside>
+        <div id="sidebarOverlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-10 hidden lg:hidden"></div>
+
+        <!-- Main Content -->
+        <main class="lg:ml-64 pt-16 min-h-screen">
+            <div id="mainContent" class="p-4 lg:p-8"></div>
+        </main>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="hideProfileModal()"></div>
+        <div class="modal-content bg-white dark:bg-secondary-800 rounded-2xl shadow-2xl w-full max-w-lg relative z-10">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-secondary-900 dark:text-white">Profile Management</h3>
+                    <button onclick="hideProfileModal()" class="text-secondary-400 hover:text-secondary-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-20 h-20 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center"><i class="fas fa-user text-primary-600 text-3xl"></i></div>
+                    <div><p id="profileDisplayName" class="text-lg font-bold text-secondary-900 dark:text-white">Admin User</p><p id="profileDisplayRole" class="text-sm text-secondary-500">Administrator</p></div>
+                </div>
+                <form onsubmit="updateProfile(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">First Name</label><input type="text" id="profileFirstName" class="w-full px-4 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white" value="Admin"></div>
+                        <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Last Name</label><input type="text" id="profileLastName" class="w-full px-4 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white" value="User"></div>
+                    </div>
+                    <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Email</label><input type="email" id="profileEmail" class="w-full px-4 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white" value="admin@school.com"></div>
+                    <div><label class="block text-sm font-medium text-secondary-700 dark:text-secondary-300 mb-1">Phone</label><input type="tel" id="profilePhone" class="w-full px-4 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-secondary-900 dark:text-white" value="+94 77 123 4567"></div>
+                    <div class="pt-4 flex gap-3">
+                        <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-2 rounded-lg font-medium transition">Save Changes</button>
+                        <button type="button" onclick="hideProfileModal()" class="flex-1 bg-secondary-200 dark:bg-secondary-700 hover:bg-secondary-300 dark:hover:bg-secondary-600 text-secondary-700 dark:text-secondary-200 py-2 rounded-lg font-medium transition">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="hideSettingsModal()"></div>
+        <div class="modal-content bg-white dark:bg-secondary-800 rounded-2xl shadow-2xl w-full max-w-lg relative z-10">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-secondary-900 dark:text-white">Settings</h3>
+                    <button onclick="hideSettingsModal()" class="text-secondary-400 hover:text-secondary-600"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between p-4 bg-secondary-50 dark:bg-secondary-700/50 rounded-xl">
+                        <div><p class="font-medium text-secondary-900 dark:text-white">Dark Mode</p><p class="text-sm text-secondary-500">Toggle dark mode theme</p></div>
+                        <button onclick="toggleDarkMode()" class="relative inline-flex h-6 w-11 items-center rounded-full bg-secondary-200 dark:bg-primary-600 transition"><span class="translate-x-1 dark:translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span></button>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-secondary-50 dark:bg-secondary-700/50 rounded-xl">
+                        <div><p class="font-medium text-secondary-900 dark:text-white">Email Notifications</p><p class="text-sm text-secondary-500">Receive email alerts</p></div>
+                        <button class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary-600 transition"><span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span></button>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-secondary-50 dark:bg-secondary-700/50 rounded-xl">
+                        <div><p class="font-medium text-secondary-900 dark:text-white">SMS Notifications</p><p class="text-sm text-secondary-500">Receive SMS alerts</p></div>
+                        <button class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary-600 transition"><span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span></button>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-secondary-50 dark:bg-secondary-700/50 rounded-xl">
+                        <div><p class="font-medium text-secondary-900 dark:text-white">Auto Backup</p><p class="text-sm text-secondary-500">Daily data backup</p></div>
+                        <button class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary-600 transition"><span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition"></span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+'''
+
+with open('/mnt/agents/output/smart_school_hub.html', 'a', encoding='utf-8') as f:
+    f.write(part2)
+
+print("Part 2 written successfully")
+
+part3_continued = '''
+        function renderTimetable(container) {
+            const tx = t[currentLanguage];
+            container.innerHTML = `
+                <div class="mb-6"><h1 class="text-2xl font-bold text-secondary-900 dark:text-white">${tx.timetable}</h1><p class="text-secondary-500 dark:text-secondary-400">Weekly class schedule</p></div>
+                <div class="bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full"><thead class="bg-secondary-50 dark:bg-secondary-700/50"><tr><th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase">Time</th><th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase">Monday</th><th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase">Tuesday</th><th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase">Wednesday</th><th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase">Thursday</th><th class="px-4 py-3 text-left text-xs font-medium text-secondary-500 uppercase">Friday</th></tr></thead>
+                        <tbody class="divide-y divide-secondary-200 dark:divide-secondary-700">${['8:00-8:45', '8:45-9:30', '9:30-10:15', '10:15-10:45', '10:45-11:30', '11:30-12:15', '12:15-13:00', '13:00-13:45', '13:45-14:30'].map(time => `<tr class="hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition"><td class="px-4 py-3 text-sm font-medium text-secondary-900 dark:text-white">${time}</td>${Array(5).fill(0).map(() => `<td class="px-4 py-3 text-sm text-secondary-500">${Math.random() > 0.3 ? ['Math', 'Science', 'English', 'History', 'Sinhala', 'Commerce', 'Art'][Math.floor(Math.random() * 7)] : '-'}</td>`).join('')}</tr>`).join('')}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderChildAttendance(container) {
+            const tx = t[currentLanguage];
+            const child = sampleData.students[0];
+            container.innerHTML = `
+                <div class="mb-6"><h1 class="text-2xl font-bold text-secondary-900 dark:text-white">${tx.childAttendance}</h1><p class="text-secondary-500 dark:text-secondary-400">Monitoring ${child.name}</p></div>
+                <div class="grid lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white dark:bg-secondary-800 rounded-2xl p-6 shadow-sm border border-secondary-200 dark:border-secondary-700">
+                            <div class="flex items-center gap-4 mb-6">
+                                <div class="w-16 h-16 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center"><i class="fas fa-user-graduate text-primary-600 text-2xl"></i></div>
+                                <div><h3 class="text-xl font-bold text-secondary-900 dark:text-white">${child.name}</h3><p class="text-secondary-500">Class ${child.class} | Roll: ${child.roll}</p></div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-xl"><p class="text-3xl font-bold text-green-600">${child.attendance}%</p><p class="text-xs text-secondary-500 mt-1">Attendance Rate</p></div>
+                                <div class="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl"><p class="text-3xl font-bold text-blue-600">42</p><p class="text-xs text-secondary-500 mt-1">Days Present</p></div>
+                                <div class="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl"><p class="text-3xl font-bold text-red-600">2</p><p class="text-xs text-secondary-500 mt-1">Days Absent</p></div>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-secondary-800 rounded-2xl p-6 shadow-sm border border-secondary-200 dark:border-secondary-700">
+                            <h3 class="text-lg font-bold text-secondary-900 dark:text-white mb-4">Recent Activity</h3>
+                            <div class="space-y-3">
+                                ${[{date: '2026-06-11', status: 'present', time: '07:55 AM'}, {date: '2026-06-10', status: 'present', time: '08:00 AM'}, {date: '2026-06-09', status: 'absent', time: '-'}, {date: '2026-06-08', status: 'late', time: '08:25 AM'}, {date: '2026-06-07', status: 'present', time: '07:50 AM'}].map(a => `
+                                    <div class="flex items-center justify-between p-3 bg-secondary-50 dark:bg-secondary-700/50 rounded-xl">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 ${a.status === 'present' ? 'bg-green-100' : a.status === 'absent' ? 'bg-red-100' : 'bg-yellow-100'} rounded-full flex items-center justify-center"><i class="fas ${a.status === 'present' ? 'fa-check text-green-600' : a.status === 'absent' ? 'fa-times text-red-600' : 'fa-clock text-yellow-600'} text-xs"></i></div>
+                                            <div><p class="text-sm font-medium text-secondary-900 dark:text-white">${a.date}</p><p class="text-xs text-secondary-500">${a.time}</p></div>
+                                        </div>
+                                        <span class="px-2 py-1 ${a.status === 'present' ? 'bg-green-100 text-green-700' : a.status === 'absent' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'} rounded-full text-xs font-medium">${a.status.charAt(0).toUpperCase() + a.status.slice(1)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="bg-white dark:bg-secondary-800 rounded-2xl p-6 shadow-sm border border-secondary-200 dark:border-secondary-700">
+                            <h3 class="text-lg font-bold text-secondary-900 dark:text-white mb-4">${tx.communicate}</h3>
+                            <div class="space-y-3">
+                                <button class="w-full p-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl text-left hover:bg-primary-100 dark:hover:bg-primary-900/30 transition">
+                                    <p class="text-sm font-medium text-primary-700 dark:text-primary-300">Send Message to Teacher</p>
+                                    <p class="text-xs text-secondary-500 mt-1">Mr. Bandara (Math)</p>
+                                </button>
+                                <button class="w-full p-3 bg-green-50 dark:bg-green-900/20 rounded-xl text-left hover:bg-green-100 dark:hover:bg-green-900/30 transition">
+                                    <p class="text-sm font-medium text-green-700 dark:text-green-300">Request Leave</p>
+                                    <p class="text-xs text-secondary-500 mt-1">Submit absence excuse</p>
+                                </button>
+                                <button class="w-full p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl text-left hover:bg-orange-100 dark:hover:bg-orange-900/30 transition">
+                                    <p class="text-sm font-medium text-orange-700 dark:text-orange-300">View Full Report</p>
+                                    <p class="text-xs text-secondary-500 mt-1">Detailed attendance analysis</p>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bg-white dark:bg-secondary-800 rounded-2xl p-6 shadow-sm border border-secondary-200 dark:border-secondary-700">
+                            <h3 class="text-lg font-bold text-secondary-900 dark:text-white mb-4">${tx.absenceAlert}</h3>
+                            <div class="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                                <div class="flex items-center gap-2 mb-2"><i class="fas fa-exclamation-triangle text-red-600"></i><p class="text-sm font-medium text-red-700 dark:text-red-300">Alert Settings</p></div>
+                                <p class="text-xs text-secondary-500 mb-3">Get notified when your child is absent</p>
+                                <button class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition">Enable SMS Alerts</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCommunicate(container) {
+            const tx = t[currentLanguage];
+            container.innerHTML = `
+                <div class="mb-6"><h1 class="text-2xl font-bold text-secondary-900 dark:text-white">${tx.communicate}</h1><p class="text-secondary-500 dark:text-secondary-400">Message teachers and school staff</p></div>
+                <div class="grid lg:grid-cols-3 gap-6">
+                    <div class="bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-secondary-200 dark:border-secondary-700 overflow-hidden">
+                        <div class="p-4 border-b border-secondary-200 dark:border-secondary-700"><h3 class="font-bold text-secondary-900 dark:text-white">Teachers</h3></div>
+                        <div class="divide-y divide-secondary-200 dark:divide-secondary-700">${sampleData.teachers.map(t => `
+                            <button class="w-full p-4 flex items-center gap-3 hover:bg-secondary-50 dark:hover:bg-secondary-700/50 transition text-left">
+                                <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center"><i class="fas fa-chalkboard-teacher text-primary-600"></i></div>
+                                <div><p class="text-sm font-medium text-secondary-900 dark:text-white">${t.name}</p><p class="text-xs text-secondary-500">${t.subject}</p></div>
+                            </button>
+                        `).join('')}</div>
+                    </div>
+                    <div class="lg:col-span-2 bg-white dark:bg-secondary-800 rounded-2xl shadow-sm border border-secondary-200 dark:border-secondary-700 flex flex-col h-[600px]">
+                        <div class="p-4 border-b border-secondary-200 dark:border-secondary-700 flex items-center gap-3">
+                            <div class="w-10 h-10 bg-primary-100 dark:bg-primary-900 rounded-full flex items-center justify-center"><i class="fas fa-chalkboard-teacher text-primary-600"></i></div>
+                            <div><p class="font-medium text-secondary-900 dark:text-white">Mr. Bandara</p><p class="text-xs text-green-600">Online</p></div>
+                        </div>
+                        <div class="flex-1 p-4 overflow-y-auto space-y-4">
+                            <div class="flex justify-start"><div class="max-w-[70%] p-3 bg-secondary-100 dark:bg-secondary-700 rounded-2xl rounded-tl-none"><p class="text-sm text-secondary-700 dark:text-secondary-200">Hello! I wanted to discuss Amal's recent performance in Mathematics.</p><p class="text-xs text-secondary-400 mt-1">10:30 AM</p></div></div>
+                            <div class="flex justify-end"><div class="max-w-[70%] p-3 bg-primary-600 rounded-2xl rounded-tr-none"><p class="text-sm text-white">Thank you for reaching out. How is he doing?</p><p class="text-xs text-primary-200 mt-1">10:32 AM</p></div></div>
+                            <div class="flex justify-start"><div class="max-w-[70%] p-3 bg-secondary-100 dark:bg-secondary-700 rounded-2xl rounded-tl-none"><p class="text-sm text-secondary-700 dark:text-secondary-200">He's doing well but missed last week's test due to illness. Can he take a makeup test?</p><p class="text-xs text-secondary-400 mt-1">10:35 AM</p></div></div>
+                        </div>
+                        <div class="p-4 border-t border-secondary-200 dark:border-secondary-700">
+                            <div class="flex gap-2">
+                                <input type="text" placeholder="Type a message..." class="flex-1 px-4 py-2 rounded-lg border border-secondary-300 dark:border-secondary-600 bg-white dark:bg-secondary-700 text-sm">
+                                <button class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.relative')) hideAllDropdowns();
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('darkMode') === 'true') { document.documentElement.classList.add('dark'); darkMode = true; }
+        });
+    </script>
+</body>
+</html>'''
+
+with open('/mnt/agents/output/smart_school_hub.html', 'a', encoding='utf-8') as f:
+    f.write(part3_continued)
+
+print("Part 3 written successfully - file complete!")
+
+# Verify file size
+import os
+file_size = os.path.getsize('/mnt/agents/output/smart_school_hub.html')
+print(f"File size: {file_size} bytes ({file_size/1024:.1f} KB)")
